@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" translate="no" class="notranslate">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="google" content="notranslate">
 <title>Odak İngilizce · English Exam Prep</title>
 <link rel="icon" href="">
 <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
@@ -509,7 +510,7 @@ const SCALE='<div class="scale">7 days → <b>always</b> · 5–6 days → <b>us
 
 const G7={
  people:{gen(n){
-  const g=shuffle(pick(PEOPLE)),shown=g.slice(0,n),descs=shuffle(g.slice(0,n+1));
+  const g=shuffle(PEOPLE[nextVar('peopleGrp',PEOPLE.length)]),shown=g.slice(0,n),descs=shuffle(g.slice(0,n+1));
   return {t:'Read the sentences and write the correct names under the pictures.',
    m:`<div class="mat">${descs.map(p=>esc(p.d)).join('<br>')}</div>`,
    q:shown.map(p=>({e:avatar(p.o),k:p.k||[p.n.toLowerCase()],a:p.n}))};
@@ -538,7 +539,7 @@ const G7={
       {q:'Why is Efe more punctual than Nehir?',k:['early'],a:'Because he comes to school early every day.'}]}
  ],
  compare:{gen(n){
-  const P=pick(PAIRS),F=cmpFeats(P),sid=Math.random();
+  const P=PAIRS[nextVar('pairs',PAIRS.length)],F=cmpFeats(P),sid=Math.random();
   const row=(X,i)=>`<tr><td><b>${X[0]}</b></td><td>${P.age[i]}</td><td>${P.ht[i]} cm</td><td>${P.wt[i]} kg</td><td>${P.hair[i]}</td><td>${stars(P.help[i])}</td><td>${stars(P.fun[i])}</td></tr>`;
   return {t:`Write ${n===5?'five':n===4?'four':'three'} sentences comparing ${P.A[0]} and ${P.B[0]}. Use a different feature each time.`,
    m:`<div style="overflow-x:auto"><table class="ws cmp"><tr><th></th><th>Age</th><th>Height</th><th>Weight</th><th>Hair</th><th>Helpful</th><th>Funny</th></tr>${row(P.A,0)}${row(P.B,1)}</table></div>`,
@@ -627,6 +628,363 @@ const SCEN7={
  5:[['people',3,4],['textA',4,4],['compar',3,4],['compare',3,4],['sportdef',3,4],['textS',3,4],['notice',3,4],['freq',3,4]]
 };
 
+// =====================================================================
+// MORE VARIETY (Nov 2026): rotation memory + generated cards/models + extra texts
+// =====================================================================
+// ---------- rotation: a student sees every variant before one repeats ----------
+const MEMSEEN={};
+function seenGet(k){try{const v=localStorage.getItem(k);if(v)return JSON.parse(v);}catch(e){} return MEMSEEN[k]||[];}
+function seenSet(k,a){MEMSEEN[k]=a;try{localStorage.setItem(k,JSON.stringify(a));}catch(e){}}
+function nextVar(key,len){
+ const k='odak-v'+grade+'-'+key; let s=seenGet(k).filter(i=>i<len);
+ const fresh=[...Array(len).keys()].filter(i=>!s.includes(i));
+ const i=fresh.length?pick(fresh):s[0];
+ s=s.filter(x=>x!==i);s.push(i);seenSet(k,s.slice(-Math.max(1,len-1)));
+ return i;
+}
+function lruOrder(key,len){
+ const k='odak-q'+grade+'-'+key; const s=seenGet(k).filter(i=>i<len);
+ return shuffle([...Array(len).keys()].filter(i=>!s.includes(i))).concat(s);
+}
+function markQs(key,len,idx){
+ const k='odak-q'+grade+'-'+key; let s=seenGet(k).filter(i=>i<len&&!idx.includes(i));
+ s=s.concat(idx);seenSet(k,s.slice(-Math.floor(len*0.6)));
+}
+
+// ---------- GRADE 5: student / club cards (generated) ----------
+const KIDS5=[['Emma','she','Germany',['germany']],['Raj','he','India',['india']],['Ahmet','he','Türkiye',['türkiye','turkey']],['Sofia','she','Italy',['italy']],
+ ['Lucas','he','Brazil',['brazil']],['Mei','she','China',['china']],['Omar','he','Egypt',['egypt']],['Yuki','she','Japan',['japan']],['Hans','he','Germany',['germany']],
+ ['Nora','she','Norway',['norway']],['Pablo','he','Spain',['spain']],['Aisha','she','Morocco',['morocco']],['Ivan','he','Russia',['russia']],['Chloe','she','France',['france']],
+ ['Kenji','he','Japan',['japan']],['Lena','she','Austria',['austria']],['Ali','he','Azerbaijan',['azerbaijan']],['Mia','she','England',['england']],['Leo','he','Canada',['canada']],['Sara','she','Greece',['greece']]];
+const CLUBS5=['music','art','chess','football','drama','science','environment','robotics','dance','English','reading','basketball'];
+const NUM=['ten','eleven','twelve'];
+G5.cards={gen(n){
+ const kids=[],used=new Set();
+ for(const c of shuffle(KIDS5)){ if(kids.length===4)break; if(used.has(c[2]))continue; used.add(c[2]); kids.push(c); }
+ const clubs=shuffle(CLUBS5).slice(0,4),cls=shuffle(['5A','5B','5C','5D']),age=kids.map(()=>pick([10,11,12]));
+ const H=pick(['STUDENT CARD','CLUB CARD','NEW STUDENT']);
+ const m='<div class="cards">'+kids.map((c,i)=>card(H,`Name: ${c[0]}<br>Country: ${c[2]}<br>Age: ${age[i]}<br>Class: ${cls[i]}<br>Club: ${clubs[i]}`)).join('')+'</div>';
+ const P=s=>s[0].toUpperCase()+s.slice(1),qs=[];
+ kids.forEach((c,i)=>{
+  qs.push({q:`Where is ${c[0]} from?`,k:c[3],a:`${P(c[1])} is from ${c[2]}.`});
+  qs.push({q:`Which club is ${c[0]} in?`,k:[clubs[i].toLowerCase()],a:`${P(c[1])} is in the ${clubs[i]} club.`});
+  qs.push({q:`Who is from ${c[2]}?`,k:[c[0].toLowerCase()],a:`${c[0]} is from ${c[2]}.`});
+  qs.push({q:`Who is in the ${clubs[i]} club?`,k:[c[0].toLowerCase()],a:`${c[0]} is in the ${clubs[i]} club.`});
+  qs.push({q:`How old is ${c[0]}?`,k:[String(age[i]),NUM[age[i]-10]],a:`${P(c[1])} is ${NUM[age[i]-10]}.`});
+  qs.push({q:`Which class is ${c[0]} in?`,k:[cls[i].toLowerCase(),cls[i][0]+' '+cls[i][1].toLowerCase()],a:`${P(c[1])} is in Class ${cls[i]}.`});
+ });
+ // one question per person first, then fill
+ const byKid=kids.map((_,i)=>shuffle(qs.slice(i*6,i*6+6)));
+ const out=[];let r=0;while(out.length<n){out.push(byKid[r%4].shift());r++;}
+ return {t:'Look at the cards quickly and answer the questions.',m,q:out};
+}};
+
+// ---------- GRADE 5: model text (generated) ----------
+const M5A=[['Mateo','Mexico','River School','robotics','building robots','robots'],['Anna','Poland','Hill School','music','playing the piano','piano'],['Felix','Austria','Park School','football','playing football','football'],
+ ['Lin','China','Star School','art','painting pictures','painting'],['Ravi','India','Ocean School','chess','playing chess','chess'],['Julia','Brazil','Sun School','dance','dancing','dancing'],
+ ['Tom','England','Lake School','science','doing experiments','experiments'],['Selma','Bosnia','Garden School','reading','reading books','books'],['Ken','Japan','Moon School','environment','planting trees','trees']];
+const M5B=[['Lily','England','5B','the art room','drama'],['Omar','Egypt','5A','the library','chess'],['Eva','Germany','5C','the gym','basketball'],['Juan','Spain','5D','the music room','music'],
+ ['Ayla','Türkiye','5A','the science lab','science'],['Nina','Italy','5B','the school garden','environment'],['Dmitri','Russia','5C','the computer lab','robotics'],['Rosa','Mexico','5D','the canteen','dance']];
+G5.model={gen(n){
+ let t,m,q;
+ if(Math.random()<.5){const p=pick(M5A),s=p[2].toLowerCase().split(' ')[0];
+  t=`Read the model text. Then write ${n===5?'five':n===4?'four':'three'} sentences about ${p[0]} like the model.`;
+  m=`<div class="mat">Hi! My name is Ayşe. I'm from Türkiye. I'm a student at Sea School. My favourite school club is the drama club. I like acting.</div><b>Now write about ${p[0]}:</b><table class="info"><tr><td>Name</td><td>${p[0]}</td></tr><tr><td>Country</td><td>${p[1]}</td></tr><tr><td>School</td><td>${p[2]}</td></tr><tr><td>Club</td><td>${p[3]} club</td></tr><tr><td>Likes</td><td>${p[4]}</td></tr></table>`;
+  const nm=p[0].toLowerCase(),c=p[1].toLowerCase();
+  q=[{k:[['name',nm],["i'm",nm],['i am',nm]],h:[nm],a:`Hi! My name is ${p[0]}.`},
+     {k:[['from',c]],h:[c],a:`I'm from ${p[1]}.`},
+     {k:[['student',p[2].toLowerCase()]],h:[s],a:`I'm a student at ${p[2]}.`},
+     {k:[['club',p[3]]],h:[p[3]],a:`My favourite school club is the ${p[3]} club.`},
+     {k:[['like',p[5]],['love',p[5]]],h:[p[5]],a:`I like ${p[4]}.`}];
+ } else {const p=pick(M5B),nm=p[0].toLowerCase(),c=p[1].toLowerCase(),cl=p[2].toLowerCase(),pl=p[3].split(' ').slice(-2,-1)[0].toLowerCase();
+  t=`Read the model text. Then write ${n===5?'five':n===4?'four':'three'} sentences about ${p[0]} like the model.`;
+  m=`<div class="mat">Hello! I'm Can. I'm from Türkiye. I'm in Class 5C. My favourite place at school is the library. I'm in the chess club.</div><b>Now write about ${p[0]}:</b><table class="info"><tr><td>Name</td><td>${p[0]}</td></tr><tr><td>Country</td><td>${p[1]}</td></tr><tr><td>Class</td><td>${p[2]}</td></tr><tr><td>Favourite place</td><td>${p[3]}</td></tr><tr><td>Club</td><td>${p[4]} club</td></tr></table>`;
+  q=[{k:[["i'm",nm],['i am',nm],['name',nm]],h:[nm],a:`Hello! I'm ${p[0]}.`},
+     {k:[['from',c]].concat(c==='türkiye'?[['from','turkey']]:[]),h:[c],a:`I'm from ${p[1]}.`},
+     {k:[['class',cl],['in',cl],['class',cl[0]+' '+cl[1]]],h:[cl],a:`I'm in Class ${p[2]}.`},
+     {k:[['favourite',p[3].replace('the ','').toLowerCase()]],h:[pl],a:`My favourite place at school is ${p[3]}.`},
+     {k:[[p[4],'club']],h:[p[4]],a:`I'm in the ${p[4]} club.`}];
+ }
+ return {t,m,q:n===4?[0,1,3,4].map(i=>q[i]):q.slice(0,n)};
+}};
+
+// ---------- GRADE 5: more texts, posters, dialogues ----------
+G5.text.push(
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hi! I\'m Yuki. I\'m from Japan. I\'m eleven years old and I\'m in Class 5B at Lake View School in Fethiye. My English teacher is Mr Polat. He is very kind. My favourite place at school is the library because I love reading comics. I\'m in the chess club. We play chess on Tuesdays after school. At our school, we must wear a uniform and we mustn\'t use mobile phones in class. On 19 May, we do sports shows in the school garden.</div>',
+  q:[{q:'Where is Yuki from?',k:['japan'],a:'She is from Japan.'},
+     {q:"Who is Yuki's English teacher?",k:['polat'],a:'Mr Polat.'},
+     {q:'Why is the library her favourite place?',k:['comic','reading','read'],a:'Because she loves reading comics.'},
+     {q:'When do they play chess?',k:['tuesday'],a:'On Tuesdays after school.'},
+     {q:"What mustn't students use in class?",k:['phone','mobile'],a:'They mustn\'t use mobile phones.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hello! My name is Deniz. I\'m from Türkiye. I\'m a new student at Green Valley School. Our school is big. It has got thirty classrooms, a canteen and a gym. My classmate Marco is from Spain. He can speak three languages! We are in the music club together. We play the guitar on Wednesdays in the music room. Our school rule is "Be on time!" We must come to school at 8:30. On 29 October, we sing songs at the Republic Day ceremony.</div>',
+  q:[{q:'How many classrooms has the school got?',k:['thirty','30'],a:'It has got thirty classrooms.'},
+     {q:'Where is Marco from?',k:['spain'],a:'He is from Spain.'},
+     {q:'What can Marco do?',k:['language'],h:['speak'],a:'He can speak three languages.'},
+     {q:'When do they play the guitar?',k:['wednesday'],a:'On Wednesdays.'},
+     {q:'What time must students come to school?',k:['8 30','half past eight','eight thirty'],h:['eight','8'],a:'At 8:30.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hi there! I\'m Nora and I\'m from Norway. I live in Fethiye with my family. I\'m a fifth grader at Blue Sea School. My best friend at school is Ece. She is from Türkiye. Ece is in the drama club, and I\'m in the art club. We paint pictures in the art room on Mondays. Our art teacher is Ms Kurt. My favourite place is the school garden because there are many trees and flowers. At school, we mustn\'t run in the corridors.</div>',
+  q:[{q:'Where is Nora from?',k:['norway'],a:'She is from Norway.'},
+     {q:"Who is Nora's best friend?",k:['ece'],a:'Ece is her best friend.'},
+     {q:'Which club is Ece in?',k:['drama'],a:'She is in the drama club.'},
+     {q:'Who is the art teacher?',k:['kurt'],a:'Ms Kurt is the art teacher.'},
+     {q:'Why is the school garden her favourite place?',k:['tree','flower'],a:'Because there are many trees and flowers.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hello! I\'m Samir. I\'m from Morocco. I\'m in Class 5C at Sunrise Lower Secondary School. My school has got a big canteen and a science lab. Our science teacher is Mr Toprak. I\'m in the environment club. Every Friday, we collect plastic bottles and recycle them. I like my school because my teachers are friendly. Students must keep the classroom clean. On 23 April, children from different countries visit our school.</div>',
+  q:[{q:'Where is Samir from?',k:['morocco'],a:'He is from Morocco.'},
+     {q:'Which class is Samir in?',k:['5c','5 c'],a:'He is in Class 5C.'},
+     {q:'What do they do every Friday?',k:['plastic','bottle','recycle','collect'],a:'They collect plastic bottles and recycle them.'},
+     {q:'Why does Samir like his school?',k:['friendly'],h:['teacher'],a:'Because his teachers are friendly.'},
+     {q:'Who visits the school on 23 April?',k:['children','countries'],a:'Children from different countries.'}]}
+);
+G5.poster.push(
+ {t:'Read the notice quickly and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">CANTEEN RULES</div>Open: 10:00 – 14:00 • Wash your hands before lunch. • Don\'t leave rubbish on the tables. • Please wait in line. • Today\'s lunch: soup, rice and fruit</div>',
+  q:[{q:'When is the canteen open?',k:['10','ten'],a:'From 10:00 to 14:00.'},
+     {q:'What must students do before lunch?',k:['wash','hand'],a:'They must wash their hands.'},
+     {q:"What is today's lunch?",k:['soup','rice','fruit'],a:'Soup, rice and fruit.'},
+     {q:"What mustn't students leave on the tables?",k:['rubbish','litter','trash','garbage'],a:"They mustn't leave rubbish."}]},
+ {t:'Read the poster quickly and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">ENGLISH CLUB – NEW MEMBERS WELCOME!</div>Day: every Tuesday • Time: 15:30 – 16:30 • Place: Room 7, next to the music room • Teacher: Ms Doğan • We play games, sing songs and watch cartoons in English!</div>',
+  q:[{q:'When is the English club?',k:['tuesday'],a:'Every Tuesday.'},
+     {q:'Where is the club?',k:['room 7','room seven'],h:['room','music'],a:'In Room 7, next to the music room.'},
+     {q:'Who is the teacher?',k:['doğan','dogan'],a:'Ms Doğan.'},
+     {q:'What do the members do?',k:['game','song','sing','cartoon'],a:'They play games, sing songs and watch cartoons.'}]},
+ {t:'Read the poster quickly and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">SCHOOL TRIP TO SAKLIKENT!</div>Date: Saturday, 15 November • Meet at the school gate at 8:00 • Bring water and a sandwich • Wear comfortable shoes • Ask your class teacher for the permission form</div>',
+  q:[{q:'When is the school trip?',k:['saturday','15 november','november'],a:'On Saturday, 15 November.'},
+     {q:'Where do students meet?',k:['gate'],a:'At the school gate.'},
+     {q:'What must students bring?',k:['water','sandwich'],a:'Water and a sandwich.'},
+     {q:'Who has got the permission form?',k:['class teacher','teacher'],a:'The class teacher.'}]}
+);
+G5.dialogue.push(
+ {t:'Read the dialogue and answer the questions.',
+  m:'<div class="mat"><b>Nil:</b> Hello! I\'m Nil. What\'s your name?<br><b>Hans:</b> I\'m Hans. I\'m from Germany.<br><b>Nil:</b> Welcome to our school! Which class are you in?<br><b>Hans:</b> I\'m in 5A.<br><b>Nil:</b> Me too! Can you play basketball?<br><b>Hans:</b> Yes, I can.<br><b>Nil:</b> Great! The basketball team practises on Fridays in the gym.<br><b>Hans:</b> Who is the coach?<br><b>Nil:</b> Mr Akın. He\'s very friendly.</div>',
+  q:[{q:'Where is Hans from?',k:['germany'],a:'He is from Germany.'},
+     {q:'Which class is Hans in?',k:['5a','5 a'],a:'He is in 5A.'},
+     {q:'When does the basketball team practise?',k:['friday'],a:'On Fridays.'},
+     {q:'Who is the coach?',k:['akın','akin'],a:'Mr Akın.'}]},
+ {t:'Read the dialogue and answer the questions.',
+  m:'<div class="mat"><b>Ali:</b> Excuse me, Ms Tan. Where is the nurse\'s room?<br><b>Ms Tan:</b> It\'s on the first floor, next to the teachers\' room. Are you OK?<br><b>Ali:</b> I\'ve got a headache.<br><b>Ms Tan:</b> Oh, sorry. The school nurse is Ms Bulut.<br><b>Ali:</b> Thank you.<br><b>Ms Tan:</b> You\'re welcome. And don\'t forget, you mustn\'t run on the stairs!</div>',
+  q:[{q:"Where is the nurse's room?",k:['first floor',"teachers' room",'teachers room'],h:['floor','teacher'],a:"It's on the first floor, next to the teachers' room."},
+     {q:'Who is the school nurse?',k:['bulut'],a:'Ms Bulut.'},
+     {q:"What is Ali's problem?",k:['headache','head'],a:"He's got a headache."},
+     {q:"What mustn't Ali do?",k:['run'],h:['stairs'],a:"He mustn't run on the stairs."}]},
+ {t:'Read the dialogue and answer the questions.',
+  m:'<div class="mat"><b>Emre:</b> Hi Lina! Which club do you want to join?<br><b>Lina:</b> The drama club. I love acting. What about you?<br><b>Emre:</b> The science club.<br><b>Lina:</b> When is it?<br><b>Emre:</b> On Thursdays, in the science lab.<br><b>Lina:</b> Who is the teacher?<br><b>Emre:</b> Ms Çelik. She\'s from Ankara.<br><b>Lina:</b> Cool! See you at break time.</div>',
+  q:[{q:'Which club does Lina want to join?',k:['drama'],a:'The drama club.'},
+     {q:'When is the science club?',k:['thursday'],a:'On Thursdays.'},
+     {q:'Where is the science club?',k:['lab','laboratory'],h:['science'],a:'In the science lab.'},
+     {q:'Who is the science club teacher?',k:['çelik','celik'],a:'Ms Çelik.'}]}
+);
+
+// ---------- GRADE 6: duty cards (generated) ----------
+const ROLES6=[['CLASS LEADER','opens the windows','open the windows','window'],['LIBRARY HELPER','puts the books on the shelves','put the books on the shelves','book'],
+ ['RECYCLING TEAM','collects paper and plastic','collect paper and plastic','paper'],['FLAG TEAM','raises the flag','raise the flag','flag'],['BOARD MONITOR','cleans the board','clean the board','board'],
+ ['PLANT HELPER','waters the plants','water the plants','plant'],['ATTENDANCE HELPER','takes the attendance list to the office','take the attendance list to the office','attendance'],
+ ['CHOIR','sings songs at the ceremonies','sing songs at the ceremonies','sing'],['PRESENTER','guides the ceremony programme','guide the ceremony programme','programme'],['LUNCH HELPER','cleans the tables after lunch','clean the tables after lunch','table']];
+const NAMES6=[['Deniz','she'],['Ayla','she'],['Kerem','he'],['Burak','he'],['Nil','she'],['Mert','he'],['Asya','she'],['Ozan','he'],['Elif','she'],['Emir','he'],['Su','she'],['Efe','he'],['Ada','she'],['Kaan','he'],['Zehra','she'],['Arda','he']];
+const DAYS6=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+G6.cards={gen(n){
+ const roles=shuffle(ROLES6).slice(0,4),names=shuffle(NAMES6).slice(0,4),days=shuffle(DAYS6).slice(0,4);
+ const m='<div class="cards">'+roles.map((r,i)=>card(r[0],`${names[i][0]}<br>${r[1]} on ${days[i]}s`)).join('')+'</div>';
+ const P=s=>s[0].toUpperCase()+s.slice(1);
+ const byKid=roles.map((r,i)=>{const nm=names[i][0],pr=P(names[i][1]),role=r[0].toLowerCase();
+  const isTeam=/team|choir/.test(role);
+  return shuffle([
+   {q:isTeam?`Who is in the ${role}?`:`Who is the ${role}?`,k:[nm.toLowerCase()],a:`${nm} is ${isTeam?'in':''} the ${role}.`.replace('is  the','is the')},
+   {q:`What does ${nm} do?`,k:[r[3]],a:`${pr} ${r[1]}.`},
+   {q:`When does ${nm} ${r[2]}?`,k:[days[i].toLowerCase()],a:`On ${days[i]}s.`},
+   {q:`Who ${r[1]}?`,k:[nm.toLowerCase()],a:`${nm} ${r[1]}.`}]);});
+ const out=[];let k=0;while(out.length<n){out.push(byKid[k%4].shift());k++;}
+ return {t:'Look at the duty cards quickly and answer the questions.',m,q:out};
+}};
+
+// ---------- GRADE 6: model text (generated) ----------
+const RT6=[['Wednesday art lesson','art','every Wednesday','wednesday','often paint pictures',['often','paint'],'paint','creative'],
+ ['Monday flag ceremony','flag','every Monday','monday','always sing the national anthem',['always','anthem'],'anthem','proud'],
+ ['Friday music lesson','music','every Friday','friday','usually play the recorder',['usually','recorder'],'recorder','happy'],
+ ['morning reading time','reading','every day','every day','usually read short stories',['usually','stor'],'stor','calm'],
+ ['Thursday chess club','chess','every Thursday','thursday','often play chess with friends',['often','chess'],'chess','clever'],
+ ['Tuesday PE lesson','pe','every Tuesday','tuesday','always play volleyball',['always','volleyball'],'volleyball','energetic']];
+const NM6=['Kaan','Defne','Arda','Selin','Bora','Melek','Yusuf','Ece','Can','Lara'];
+const GET6=[['half past six',['half past six','6 30','six thirty'],['six','6']],['seven o\'clock',["seven o'clock",'7 00','seven'],['seven','7']],
+ ['quarter past seven',['quarter past seven','7 15','seven fifteen'],['seven','7']],['quarter to seven',['quarter to seven','6 45','six forty five'],['seven','quarter']]];
+const GO6=[['usually','take the bus to school','bus'],['always','walk to school','walk'],['often','ride my bike to school','bike'],['sometimes','go to school by car','car']];
+const RESP6=[['library helper','library'],['class leader','leader'],['board monitor','board'],['plant helper','plant'],['flag team member','flag']];
+const NAT6=[['sing in the choir',['sing','choir'],['choir','sing']],['read a poem',['poem'],['poem']],['carry the flag',['flag'],['flag']],['give a speech',['speech'],['speech']],['play the drum',['drum'],['drum']]];
+G6.model={gen(n){
+ const nm=pick(NM6),l=nm.toLowerCase().replace('i̇','i');let t,m,q;
+ const keysName=[["i'm",nm.toLowerCase()],['i am',nm.toLowerCase()],['name',nm.toLowerCase()]];
+ const N=n===5?'five':n===4?'four':'three';
+ if(Math.random()<.5){const r=pick(RT6);
+  t=`Read the model text. Then write ${N} sentences about ${nm}'s favourite routine like the model.`;
+  m=`<div class="mat">Hi, I'm Melis. My favourite school routine is the morning break. We have it every day. We usually play games in the garden. It makes me feel happy.</div><b>Now write about ${nm} (use "I"):</b><table class="info"><tr><td>Name</td><td>${nm}</td></tr><tr><td>Favourite routine</td><td>${r[0]}</td></tr><tr><td>How often</td><td>${r[2]}</td></tr><tr><td>Activity</td><td>${r[4]}</td></tr><tr><td>Feeling</td><td>${r[7]}</td></tr></table>`;
+  q=[{k:keysName,h:[nm.toLowerCase()],a:`Hi, I'm ${nm}.`},
+     {k:[['routine',r[1]]],h:[r[1]],a:`My favourite school routine is the ${r[0]}.`},
+     {k:[[r[3]]],h:[r[3].split(' ').pop()],a:`We have it ${r[2]}.`},
+     {k:[r[5]],h:[r[6]],a:`We ${r[4]}.`},
+     {k:[['feel',r[7]],['makes me',r[7]]],h:[r[7]],a:`It makes me feel ${r[7]}.`}];
+ } else {const g=pick(GET6),go=pick(GO6),rs=pick(RESP6),na=pick(NAT6);
+  t=`Read the model text. Then write ${N} sentences about ${nm} like the model.`;
+  m=`<div class="mat">I'm Lale. I get up at seven. I always walk to school. I'm the class leader. On national days, I read a poem.</div><b>Now write about ${nm} (use "I"):</b><table class="info"><tr><td>Name</td><td>${nm}</td></tr><tr><td>Get up</td><td>${g[0]}</td></tr><tr><td>Go to school</td><td>${go[0]} / ${go[1].replace(' to school','').replace('my ','a ')}</td></tr><tr><td>Responsibility</td><td>${rs[0]}</td></tr><tr><td>National days</td><td>${na[0]}</td></tr></table>`;
+  q=[{k:keysName,h:[nm.toLowerCase()],a:`I'm ${nm}.`},
+     {k:g[1].map(x=>[x]),h:g[2],a:`I get up at ${g[0]}.`},
+     {k:[[go[0],go[2]]],h:[go[2]],a:`I ${go[0]} ${go[1]}.`},
+     {k:[[rs[0]]],h:[rs[1]],a:`I'm the ${rs[0]}.`},
+     {k:[na[1]],h:na[2],a:`On national days, I ${na[0]}.`}];
+ }
+ return {t,m,q:n===4?[0,1,3,4].map(i=>q[i]):q.slice(0,n)};
+}};
+
+// ---------- GRADE 6: more texts, posters, dialogues ----------
+G6.text.push(
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hi, I\'m Defne. I\'m a sixth grader in Muğla. I usually get up at quarter to seven. My school starts at eight o\'clock, so I always have breakfast quickly. My mother drives me to school on rainy days, but I usually ride my bike. This year, I\'m the board monitor in my class. I clean the board after every lesson. At lunchtime, I often play volleyball with my classmates. On Fridays, we have a class meeting and talk about our class rules.</div>',
+  q:[{q:'What time does Defne get up?',k:['quarter to seven','6 45','six forty five'],h:['seven','quarter'],a:'She gets up at quarter to seven.'},
+     {q:'How does Defne usually go to school?',k:['bike','bicycle','cycle'],h:['ride'],a:'She usually rides her bike.'},
+     {q:"What is Defne's responsibility in class?",k:['board'],a:'She is the board monitor. She cleans the board.'},
+     {q:'What does Defne often do at lunchtime?',k:['volleyball'],a:'She often plays volleyball.'},
+     {q:'What do they do on Fridays?',k:['meeting','rules'],a:'They have a class meeting and talk about the class rules.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hello! My name is Arda. I\'m in Class 6A. I usually wake up at half past seven because my school is very close to my house. I walk to school with my friend Can. Every Monday and Friday, we have a flag ceremony in the schoolyard. I\'m in the flag team, so I raise the flag on Mondays. After school, I sometimes go to the computer club. I never do my homework late at night; I always do it before dinner.</div>',
+  q:[{q:'Why does Arda wake up at half past seven?',k:['close','near'],a:'Because his school is very close to his house.'},
+     {q:'Who does Arda walk to school with?',k:['can'],a:'With his friend Can.'},
+     {q:'When do they have a flag ceremony?',k:[['monday','friday']],h:['monday','friday'],a:'Every Monday and Friday.'},
+     {q:'What does Arda do on Mondays?',k:['raise','flag'],a:'He raises the flag.'},
+     {q:'When does Arda do his homework?',k:['before dinner','dinner'],a:'He always does it before dinner.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hi, I\'m Melek. I\'m eleven and I\'m in the sixth grade. On school days, I get up at seven o\'clock and I take the school bus at half past seven. My best friend Zeynep is the class president. She listens to our problems and talks to our teachers. I\'m a member of the recycling team. We collect paper and plastic every Wednesday. At break time, I usually chat with my friends in the garden. On 10 November, we stand in silence at 9:05 to remember Atatürk.</div>',
+  q:[{q:'What time does Melek take the school bus?',k:['half past seven','7 30','seven thirty'],h:['seven','7'],a:'At half past seven.'},
+     {q:'Who is the class president?',k:['zeynep'],a:'Zeynep is the class president.'},
+     {q:'What does the recycling team collect?',k:['paper','plastic'],a:'Paper and plastic.'},
+     {q:'Where does Melek chat with her friends at break time?',k:['garden'],a:'In the garden.'},
+     {q:'What do they do on 10 November at 9:05?',k:['silence','remember','atatürk','ataturk'],a:'They stand in silence to remember Atatürk.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hello! I\'m Bora and I\'m a sixth grade student. My school day starts at quarter past eight. I always say good morning to the school guard at the gate. In class, I\'m the window monitor. I open the windows at every break and close them before the lesson starts. Our English lessons are on Tuesdays and Thursdays. I love them because we often play games. After school, I help my little brother with his homework.</div>',
+  q:[{q:"When does Bora's school day start?",k:['quarter past eight','8 15','eight fifteen'],h:['eight','8'],a:'At quarter past eight.'},
+     {q:'Who does Bora say good morning to at the gate?',k:['guard'],a:'The school guard.'},
+     {q:'What does Bora do at every break?',k:['open','window'],a:'He opens the windows.'},
+     {q:'When are the English lessons?',k:[['tuesday','thursday']],h:['tuesday','thursday'],a:'On Tuesdays and Thursdays.'},
+     {q:'Why does Bora love English lessons?',k:['game'],a:'Because they often play games.'}]}
+);
+G6.poster.push(
+ {t:'Read the programme quickly and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">29 OCTOBER REPUBLIC DAY PROGRAMME</div>9:30 Opening speech by the headmaster • 9:45 National anthem • 10:00 Poems by 6A and 6B • 10:30 Folk dance show in the sports hall • 11:00 Painting exhibition in the library • Wear red and white!</div>',
+  q:[{q:'What time is the national anthem?',k:['9 45','quarter to ten','nine forty five'],a:'At 9:45.'},
+     {q:'Who reads poems?',k:['6a','6b','6 a','6 b'],a:'6A and 6B.'},
+     {q:'Where is the folk dance show?',k:['sports hall'],h:['hall'],a:'In the sports hall.'},
+     {q:'What colours should students wear?',k:[['red','white']],h:['red','white'],a:'Red and white.'}]},
+ {t:'Read the notice quickly and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">LIBRARY HELPERS NEEDED!</div>Are you a sixth grader? Do you love books? • Help us every Tuesday at lunchtime. • Put the books on the shelves and help younger students. • Write your name on the list in the library. • Last day: Friday, 21 November</div>',
+  q:[{q:'Who can be a library helper?',k:['sixth','6th','6 th'],h:['grade','student'],a:'Sixth graders.'},
+     {q:'When do the helpers work?',k:['tuesday'],h:['lunch'],a:'Every Tuesday at lunchtime.'},
+     {q:'Where can students write their names?',k:['list','library'],a:'On the list in the library.'},
+     {q:'When is the last day?',k:['21 november','friday','november'],a:'Friday, 21 November.'}]},
+ {t:'Read the timetable quickly and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">CLASS 6A – EXAM WEEK</div>Monday: Maths at 9:00 • Tuesday: Science at 10:00 • Wednesday: English at 9:00 • Thursday: Turkish at 11:00 • Bring two pencils and an eraser! • Don\'t bring your mobile phone.</div>',
+  q:[{q:'When is the English exam?',k:['wednesday'],a:'On Wednesday.'},
+     {q:'What time is the science exam?',k:['10','ten'],a:'At 10:00.'},
+     {q:'What must students bring?',k:['pencil','eraser'],a:'Two pencils and an eraser.'},
+     {q:"What mustn't students bring?",k:['phone','mobile'],a:'Their mobile phones.'}]}
+);
+G6.dialogue.push(
+ {t:'Read the dialogue and answer the questions.',
+  m:'<div class="mat"><b>Ms Kaya:</b> Good morning, class! Who wants to be the class leader this term?<br><b>Ozan:</b> I do, Ms Kaya! I\'m always on time and I like helping my friends.<br><b>Ms Kaya:</b> Great, Ozan. And who can water the plants?<br><b>İpek:</b> Me! I water the plants at home every day.<br><b>Ms Kaya:</b> Thank you, İpek. Please water them on Mondays and Thursdays.<br><b>İpek:</b> OK, I won\'t forget!</div>',
+  q:[{q:'Who wants to be the class leader?',k:['ozan'],a:'Ozan.'},
+     {q:'Why can Ozan be a good class leader?',k:['on time','help'],a:'Because he is always on time and he likes helping his friends.'},
+     {q:'What can İpek do?',k:['water','plant'],a:'She can water the plants.'},
+     {q:'When must İpek water the plants?',k:[['monday','thursday']],h:['monday','thursday'],a:'On Mondays and Thursdays.'}]},
+ {t:'Read the dialogue and answer the questions.',
+  m:'<div class="mat"><b>Aras:</b> Hi Mina! What time does the school trip start?<br><b>Mina:</b> At eight o\'clock. We meet at the school gate.<br><b>Aras:</b> How do we go to the museum?<br><b>Mina:</b> By bus. Mr Er drives it.<br><b>Aras:</b> What do we need?<br><b>Mina:</b> A notebook and a pencil. We take notes about the museum.<br><b>Aras:</b> Great. I usually get up late on Saturdays, so I must set my alarm!</div>',
+  q:[{q:'What time does the school trip start?',k:['eight','8'],a:"At eight o'clock."},
+     {q:'Where do they meet?',k:['gate'],a:'At the school gate.'},
+     {q:'How do they go to the museum?',k:['bus'],a:'By bus.'},
+     {q:'What do they need?',k:['notebook','pencil'],a:'A notebook and a pencil.'}]},
+ {t:'Read the dialogue and answer the questions.',
+  m:'<div class="mat"><b>Teacher:</b> Who is on duty today?<br><b>Kaan:</b> Me, sir. I\'m the class monitor this week.<br><b>Teacher:</b> Good. Please clean the board and take the attendance list to the office.<br><b>Kaan:</b> Sure. Where is the office?<br><b>Teacher:</b> It\'s on the ground floor, next to the headmaster\'s room.<br><b>Kaan:</b> OK. And Selin helps me. She opens the windows.</div>',
+  q:[{q:'Who is the class monitor this week?',k:['kaan'],a:'Kaan.'},
+     {q:'What must Kaan take to the office?',k:['attendance','list'],a:'The attendance list.'},
+     {q:'Where is the office?',k:['ground floor'],h:['floor','headmaster'],a:"On the ground floor, next to the headmaster's room."},
+     {q:'What does Selin do?',k:['window','open'],a:'She opens the windows.'}]}
+);
+
+// ---------- GRADE 7: more people, pairs, texts, notices ----------
+PEOPLE.push(
+ [{n:'Duru',d:'Duru is short and slim. She has got long curly black hair.',o:{h:.76,b:'slim',len:'long',st:'curly',c:'#222',shirt:'#f43f5e'}},
+  {n:'Kemal',d:'Kemal is tall and plump. He has got short blonde hair and he wears glasses.',o:{h:1,b:'plump',len:'short',c:'#e2b84a',glasses:1,shirt:'#0891b2'}},
+  {n:'Mrs Şule',k:['şule','sule'],d:'Mrs Şule is middle-aged. She wears a headscarf and glasses.',o:{h:.88,b:'medium',scarf:'#be185d',glasses:1,shirt:'#4b5563'}},
+  {n:'Yiğit',k:['yiğit','yigit'],d:'Yiğit is medium height and well-built. He has got short red hair.',o:{h:.88,b:'well',len:'short',c:'#c4502a',shirt:'#16a34a'}},
+  {n:'Mr Rıza',k:['rıza','riza'],d:'Mr Rıza is an old man. He is short and he has got a grey beard.',o:{h:.76,b:'medium',len:'short',c:'#b9b9b9',beard:1,shirt:'#92400e'}}]
+);
+PAIRS.push(
+ {A:['Ozan','he','him'],B:['Elif','she','her'],age:[13,11],ht:[163,149],wt:[55,42],hair:['short','long'],help:[3,5],fun:[5,2]},
+ {A:['Defne','she','her'],B:['Mira','she','her'],age:[12,13],ht:[154,150],wt:[45,47],hair:['long','short'],help:[4,1],fun:[1,4]},
+ {A:['Emir','he','him'],B:['Kerem','he','him'],age:[14,12],ht:[158,166],wt:[52,57],hair:['long','short'],help:[2,4],fun:[3,5]}
+);
+G7.textA.push(
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hello, I\'m Elif. My grandmother, Nermin, is sixty-five years old. She is short and a bit plump, and she has got short grey hair. She wears glasses when she reads. My grandmother is very patient. She is more patient than my mother because she never gets angry. She is also very generous. She often cooks for our neighbours. I am more impatient than her, but I\'m learning from her.</div>',
+  q:[{q:'How old is Nermin?',k:['sixty five','65'],a:'She is sixty-five years old.'},
+     {q:"What colour is Nermin's hair?",k:['grey','gray'],a:'It is grey.'},
+     {q:'When does Nermin wear glasses?',k:['read'],a:'When she reads.'},
+     {q:'Why is Nermin more patient than Elif\'s mother?',k:['angry'],a:'Because she never gets angry.'},
+     {q:'Why is Nermin generous?',k:['cook','neighbour','neighbor'],a:'Because she often cooks for their neighbours.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hi! I\'m Mert. My twin brother, Ali, and I look the same. We are both tall and slim with short curly black hair. But we are very different in personality. Ali is more talkative than me. He talks to everyone on the bus! I\'m quieter, but I\'m more organised than Ali because I always plan my week. Ali is braver than me. He loves climbing high rocks. We are both funny, so our friends love us.</div>',
+  q:[{q:'What do Mert and Ali look like?',k:['tall','slim','curly'],a:'They are tall and slim with short curly black hair.'},
+     {q:'Who is more talkative?',k:['ali'],a:'Ali is more talkative.'},
+     {q:'Why is Mert more organised than Ali?',k:['plan'],a:'Because he always plans his week.'},
+     {q:'Why is Ali braver than Mert?',k:['climb','rock'],a:'Because he loves climbing high rocks.'},
+     {q:'Why do their friends love them?',k:['funny'],a:'Because they are both funny.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">My name is Seda and this is my aunt, Gül. She is thirty-four years old. She is medium height and slim, and she wears a headscarf. She has got big brown eyes. Gül is a nurse, so she is very hardworking. She works at night three times a week. She is calmer than my father because she never shouts. She is also a careful driver. She always drives slowly.</div>',
+  q:[{q:'How old is Gül?',k:['thirty four','34'],a:'She is thirty-four years old.'},
+     {q:'What does Gül wear?',k:['headscarf','scarf'],a:'She wears a headscarf.'},
+     {q:'Why is Gül hardworking?',k:['nurse','night'],a:'Because she is a nurse and she works at night three times a week.'},
+     {q:"Why is Gül calmer than Seda's father?",k:['shout'],a:'Because she never shouts.'},
+     {q:'Why is Gül a careful driver?',k:['slow'],a:'Because she always drives slowly.'}]}
+);
+G7.textS.push(
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hi, I\'m Taylan. I\'m a member of the school basketball team. In basketball, each team has five players on the court. We practise in the sports hall on Tuesdays and Thursdays after school. I usually score many points because I\'m tall. My sister Defne prefers individual sports. She does archery at the youth centre. She needs a bow and arrows, and she always concentrates hard.</div>',
+  q:[{q:'How many players does each team have on the court?',k:['five','5'],a:'Five players.'},
+     {q:"When does Taylan's team practise?",k:[['tuesday','thursday']],h:['tuesday','thursday'],a:'On Tuesdays and Thursdays after school.'},
+     {q:'Why does Taylan usually score many points?',k:['tall'],a:'Because he is tall.'},
+     {q:'Where does Defne do archery?',k:['youth','centre','center'],a:'At the youth centre.'},
+     {q:'What does Defne need for archery?',k:['bow','arrow'],a:'A bow and arrows.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">My name is Asel, and I love water sports. In summer, I go sailing with my uncle on Saturdays. We always wear life jackets. My favourite water sport is windsurfing because it is fast and exciting. My friend Kemal doesn\'t like water sports. He prefers chess because he loves thinking games. He plays chess online every evening. Sometimes he takes part in tournaments in İzmir.</div>',
+  q:[{q:'Who does Asel go sailing with?',k:['uncle'],a:'With her uncle.'},
+     {q:'What do they always wear when they go sailing?',k:['life jacket','jacket'],a:'Life jackets.'},
+     {q:"Why is windsurfing Asel's favourite water sport?",k:['fast','exciting'],a:'Because it is fast and exciting.'},
+     {q:'Why does Kemal prefer chess?',k:['thinking','think'],a:'Because he loves thinking games.'},
+     {q:'How often does Kemal play chess online?',k:['every evening','evening'],a:'Every evening.'}]},
+ {t:'Read the text and answer the questions.',
+  m:'<div class="mat">Hello! I\'m Begüm. I go running every morning before school. I run for thirty minutes in the park near my house. I usually wear a cap and running shoes. On Sundays, I go cycling with my cousins by the sea. My PE teacher says, "Always drink water and warm up before sports." Next month, I\'m taking part in a school race. I\'m very excited!</div>',
+  q:[{q:'When does Begüm go running?',k:['morning'],a:'Every morning before school.'},
+     {q:'How long does Begüm run?',k:['thirty','30'],a:'For thirty minutes.'},
+     {q:'What does Begüm usually wear for running?',k:['cap','shoe'],a:'A cap and running shoes.'},
+     {q:'Who does Begüm go cycling with on Sundays?',k:['cousin'],a:'With her cousins.'},
+     {q:'What does the PE teacher say?',k:['water','warm'],a:'"Always drink water and warm up before sports."'}]}
+);
+G7.notice.push(
+ {t:'Read the notice and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">BLUE WAVE SWIMMING POOL</div>Open: Monday – Saturday, 07:00 – 21:00 • Closed on Sundays • Children under 10 must swim with an adult • Wear a swimming cap in the pool • Free lessons for beginners on Wednesdays</div>',
+  q:[{q:'When is the pool closed?',k:['sunday'],a:'On Sundays.'},
+     {q:'Who must swim with an adult?',k:['under 10','under ten','children'],a:'Children under 10.'},
+     {q:'What must you wear in the pool?',k:['cap'],a:'A swimming cap.'},
+     {q:'When are the free lessons for beginners?',k:['wednesday'],a:'On Wednesdays.'}]},
+ {t:'Read the notice and answer the questions.',
+  m:'<div class="mat dash"><div class="ttl">SCHOOL SPORTS DAY – 20 MAY</div>Running races: 9:00 on the sports field • Tug of war: 10:30 in the schoolyard • Table tennis tournament: 13:00 in the sports hall • Wear your PE kit and bring a water bottle • Prizes for all winners!</div>',
+  q:[{q:'Where are the running races?',k:['sports field','field'],a:'On the sports field.'},
+     {q:'What time is the tug of war?',k:['10 30','half past ten','ten thirty'],a:'At 10:30.'},
+     {q:'What must students wear?',k:['kit','pe'],a:'Their PE kit.'},
+     {q:'What do the winners get?',k:['prize'],a:'Prizes.'}]}
+);
+
 // ---------- SCENARIOS — Grades 5 & 6: [section, number of questions] (MEB tables, same for both grades) ----------
 const SCEN={
  1:[['cards',5],['text',5],['pics',5],['word',5],['model',5]],
@@ -687,8 +1045,8 @@ function openS(s){
   let sec=B[key],qs,title,mat;
   if(sec.gen){const g=sec.gen(n);title=g.t;mat=g.m;qs=g.q;}
   else{
-   if(Array.isArray(sec)){ sec=variant[key]||(variant[key]=pick(sec)); qs=key==='model'&&n===4?[0,1,3,4].map(i=>sec.q[i]):sec.q.slice(0,n); }
-   else { if(!pools[key]) pools[key]=shuffle(sec.q); qs=pools[key].splice(0,n); }
+   if(Array.isArray(sec)){ sec=variant[key]||(variant[key]=sec[nextVar(key,sec.length)]); qs=key==='model'&&n===4?[0,1,3,4].map(i=>sec.q[i]):sec.q.slice(0,n); }
+   else { if(!pools[key]) pools[key]=lruOrder(key,sec.q.length); const ix=pools[key].splice(0,n); markQs(key,sec.q.length,ix); qs=ix.map(i=>sec.q[i]); }
    title=typeof sec.t==='function'?sec.t(n===5?'five':n===4?'four':'three'):sec.t; mat=sec.m||'';
   }
   const L=String.fromCharCode(65+si);
